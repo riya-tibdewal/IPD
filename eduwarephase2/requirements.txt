@@ -1,0 +1,9 @@
+# EduAware v2 — Python dependencies
+# Install with:  pip install -r requirements.txt
+#
+# Python 3.9+ recommended.
+# For GPU inference add: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+
+ultralytics>=8.0.0      # YOLOv8 + ByteTrack (built-in tracker)
+opencv-python>=4.8.0    # video capture, rendering
+numpy>=1.24.0           # keypoint arithmetic
