@@ -41,15 +41,20 @@ class StudentScore:
     frame_counts: dict = field(default_factory=dict)
     first_seen:   float = field(default_factory=time.time)
     last_seen:    float = field(default_factory=time.time)
+    ema_attention: float = 0.0
 
     # ──────────────────────────────────────────────────────────────────────
     # Mutation
     # ──────────────────────────────────────────────────────────────────────
 
-    def record(self, behavior: str):
+    def record(self, behavior: str, attention_score: Optional[float] = None):
         """Increment the counter for one behavior label."""
         self.frame_counts[behavior] = self.frame_counts.get(behavior, 0) + 1
         self.last_seen = time.time()
+        if attention_score is None:
+            attention_score = 100.0 if behavior in C.ATTENTIVE_BEHAVIORS else 0.0
+        alpha = getattr(C, "ATTENTION_SCORE_ALPHA", 0.15)
+        self.ema_attention = alpha * float(attention_score) + (1.0 - alpha) * self.ema_attention
 
     # ──────────────────────────────────────────────────────────────────────
     # Derived metrics
@@ -73,7 +78,10 @@ class StudentScore:
         total = self.total_frames
         if total == 0:
             return 0.0
-        return (self.attentive_frames / total) * 100.0
+        count_pct = (self.attentive_frames / total) * 100.0
+        if total < 5:
+            return count_pct
+        return 0.65 * self.ema_attention + 0.35 * count_pct
 
     def dominant_behavior(self) -> str:
         """The behavior seen most often overall."""
@@ -105,14 +113,14 @@ class AttentionRegistry:
     def __init__(self):
         self._scores: dict[int, StudentScore] = {}
 
-    def record(self, track_id: int, stable_label: str):
+    def record(self, track_id: int, stable_label: str, attention_score: Optional[float] = None):
         """
         Record one stable-label frame for a student.
         Creates a new StudentScore on first encounter.
         """
         if track_id not in self._scores:
             self._scores[track_id] = StudentScore(track_id=track_id)
-        self._scores[track_id].record(stable_label)
+        self._scores[track_id].record(stable_label, attention_score)
 
     def get(self, track_id: int) -> Optional[StudentScore]:
         return self._scores.get(track_id)

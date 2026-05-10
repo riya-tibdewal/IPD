@@ -39,6 +39,7 @@ class StudentBuffer:
         threshold: float = SMOOTH_THRESH,
     ):
         self._buf       = deque(maxlen=buf_len)
+        self._conf      = deque(maxlen=buf_len)
         self._threshold = threshold
         self.stable     = "Unknown"   # currently displayed label
 
@@ -46,7 +47,7 @@ class StudentBuffer:
     # Public API
     # ──────────────────────────────────────────────────────────────────────
 
-    def push(self, raw_label: str) -> str:
+    def push(self, raw_label: str, confidence: float = 1.0) -> str:
         """
         Add a new raw frame prediction and recompute the stable label.
 
@@ -54,6 +55,7 @@ class StudentBuffer:
             The current stable label (possibly unchanged).
         """
         self._buf.append(raw_label)
+        self._conf.append(max(0.0, min(float(confidence), 1.0)))
         self._recompute()
         return self.stable
 
@@ -65,7 +67,8 @@ class StudentBuffer:
         """
         if not self._buf:
             return 0.0
-        return Counter(self._buf)[self.stable] / len(self._buf)
+        total = sum(self._conf) or 1.0
+        return sum(c for lbl, c in zip(self._buf, self._conf) if lbl == self.stable) / total
 
     @property
     def frame_count(self) -> int:
@@ -75,6 +78,7 @@ class StudentBuffer:
     def reset(self):
         """Clear buffer and reset stable label (e.g. after track loss)."""
         self._buf.clear()
+        self._conf.clear()
         self.stable = "Unknown"
 
     # ──────────────────────────────────────────────────────────────────────
@@ -84,8 +88,14 @@ class StudentBuffer:
     def _recompute(self):
         if not self._buf:
             return
-        top_label, top_count = Counter(self._buf).most_common(1)[0]
-        fraction = top_count / len(self._buf)
-        if fraction >= self._threshold:
+        weighted = Counter()
+        for label, confidence in zip(self._buf, self._conf):
+            weighted[label] += confidence
+        top_label, top_weight = weighted.most_common(1)[0]
+        total = sum(weighted.values()) or 1.0
+        fraction = top_weight / total
+        current_fraction = weighted[self.stable] / total if self.stable in weighted else 0.0
+        margin = 0.15
+        if fraction >= self._threshold and fraction > current_fraction + margin:
             self.stable = top_label
         # else: keep previous stable label — no flip on ambiguous evidence

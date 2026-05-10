@@ -1,100 +1,120 @@
-"""
-config.py — EduAware v2 Global Configuration
-=============================================
-All tunable constants live here.
-Import this module everywhere instead of hard-coding magic numbers.
-"""
+"""Global configuration for EduAware classroom behavior analytics."""
 
-# ══════════════════════════════════════════════════════════════════════════════
-# VIDEO / CAPTURE
-# ══════════════════════════════════════════════════════════════════════════════
+# Capture
+CAPTURE_WIDTH = 1280
+CAPTURE_HEIGHT = 720
+THREADED_CAP = True
+CAMERA_WARMUP_FRAMES = 8
+CAMERA_READ_TIMEOUT_S = 4.0
+CAMERA_OPEN_RETRIES = 3
+CAMERA_RETRY_DELAY_S = 0.35
 
-CAPTURE_WIDTH   = 1280
-CAPTURE_HEIGHT  = 720
-THREADED_CAP    = True      # background thread for camera reads
+# Models
+YOLO_MODEL = "yolov8n-pose.pt"
+OBJECT_MODEL = "yolov8n.pt"
+ENABLE_OBJECT_DETECTION = False
+OBJECT_DETECT_EVERY_N = 5
+YOLO_IMGSZ = 480
+YOLO_CONF = 0.45
+YOLO_IOU = 0.45
+USE_GPU = False
+PHONE_CLASSES = {"cell phone", "mobile phone", "phone"}
+WRITING_OBJECT_CLASSES = {"book", "notebook", "paper", "laptop", "keyboard"}
 
-# ══════════════════════════════════════════════════════════════════════════════
-# YOLO
-# ══════════════════════════════════════════════════════════════════════════════
+# Face recognition cadence/cache hooks
+FACE_RECOGNITION_EVERY_N = 10
+FACE_IDENTITY_TTL_S = 18.0
+FACE_REVALIDATE_S = 20.0
+FACE_MIN_CONFIDENCE = 0.62
+FACE_MIN_TRACK_FRAMES = 8
+FACE_MIN_BOX_SIZE = 48
+FACE_SUBMIT_COOLDOWN_S = 1.5
 
-YOLO_MODEL      = "yolov8n-pose.pt"   # n=fastest  s=balanced  m=accurate
-YOLO_IMGSZ      = 480                 # inference input size (lower = faster)
-YOLO_CONF       = 0.45                # person detection confidence floor
-YOLO_IOU        = 0.45                # NMS IoU threshold
-USE_GPU         = False               # True → CUDA device 0
+# Performance
+FRAME_SKIP = 2
+STALE_TRACK_S = 7.0
+LOG_LEVEL = "INFO"
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TRACKING (ByteTrack via YOLOv8 built-in)
-# ══════════════════════════════════════════════════════════════════════════════
+# COCO keypoint indices
+KP_NOSE = 0
+KP_L_EYE = 1
+KP_R_EYE = 2
+KP_L_EAR = 3
+KP_R_EAR = 4
+KP_L_SHOULDER = 5
+KP_R_SHOULDER = 6
+KP_L_ELBOW = 7
+KP_R_ELBOW = 8
+KP_L_WRIST = 9
+KP_R_WRIST = 10
+KP_L_HIP = 11
+KP_R_HIP = 12
+KP_L_KNEE = 13
+KP_R_KNEE = 14
+KP_L_ANKLE = 15
+KP_R_ANKLE = 16
+KP_CONF = 0.30
 
-TRACK_PERSIST   = True                # keep tracker state between calls
+# Pose thresholds. Values are normalized by shoulder/hip scale.
+HEAD_DOWN_START = 0.75
+HEAD_DOWN_STRONG = 0.15
+HEAD_UP_START = 1.85
+HEAD_UP_STRONG = 2.45
+DESK_WRIST_REL_Y = 0.80
+HAND_HEAD_DIST = 1.20
+WRITING_MOTION_MIN = 0.015
+WRITING_MOTION_MAX = 0.22
+STILL_MOTION_MAX = 0.018
+EXCESSIVE_MOTION = 0.28
+SLEEP_MIN_HISTORY = 24
+PHONE_MIN_HISTORY = 12
+WRITING_MIN_HISTORY = 10
+WRITING_ACTIVE_WRIST_FRAC = 0.30
+SLEEP_INACTIVE_FRAC = 0.72
+SLEEP_HEAD_DOWN_FRAC = 0.68
+BODY_ENGAGEMENT_MIN = 0.18
 
-# ══════════════════════════════════════════════════════════════════════════════
-# KEYPOINT THRESHOLDS
-# ══════════════════════════════════════════════════════════════════════════════
+# Temporal smoothing/scoring
+HISTORY_FRAMES = 60
+SMOOTH_BUF_LEN = HISTORY_FRAMES
+SMOOTH_THRESH = 0.58
+EMA_ALPHA = 0.15
+HYSTERESIS_MARGIN = 0.15
+MIN_SWITCH_FRAMES = 10
+STRONG_EVIDENCE_MARGIN = 0.28
+STRONG_EVIDENCE_FRAMES = 4
+MIN_LABEL_CONFIDENCE = 0.42
+ATTENTION_SCORE_ALPHA = 0.15
 
-KP_CONF         = 0.35                # minimum per-keypoint confidence
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TEMPORAL SMOOTHING
-# ══════════════════════════════════════════════════════════════════════════════
-
-SMOOTH_BUF_LEN  = 45                  # rolling window size (frames)
-SMOOTH_THRESH   = 0.70                # majority fraction to flip stable label
-
-# ══════════════════════════════════════════════════════════════════════════════
-# PERFORMANCE
-# ══════════════════════════════════════════════════════════════════════════════
-
-FRAME_SKIP      = 2                   # process 1-in-N frames (1 = every frame)
-STALE_TRACK_S   = 5.0                 # seconds before a lost track is removed
-
-# ══════════════════════════════════════════════════════════════════════════════
-# ATTENTION SCORING
-# ══════════════════════════════════════════════════════════════════════════════
-
-# Behaviors that count as "attentive" for the percentage calculation
-ATTENTIVE_BEHAVIORS = {"Attentive", "Writing"}
-
-# ══════════════════════════════════════════════════════════════════════════════
-# DISPLAY
-# ══════════════════════════════════════════════════════════════════════════════
-
-WINDOW_NAME     = "EduAware v2 — Classroom Behavior Analytics"
-WINDOW_W        = 1280
-WINDOW_H        = 720
-
-# Behavior → BGR color
-BEHAVIOR_COLORS = {
-    "Attentive":         (50,  210,  50),
-    "Writing":           (255, 180,   0),
-    "Using Phone":       (0,   60,  220),
-    "Talking":           (200,  80, 200),
-    "Looking Up":        (0,  200, 255),
-    "Distracted (Side)": (0,  120, 255),
-    "Unknown":           (140, 140, 140),
+# Attention weights
+ATTENTION_WEIGHTS = {
+    "head_pose": 0.25,
+    "posture": 0.20,
+    "gaze": 0.20,
+    "movement": 0.15,
+    "task_context": 0.20,
 }
+ATTENTIVE_BEHAVIORS = {"ATTENTIVE", "WRITING"}
 
-# ══════════════════════════════════════════════════════════════════════════════
-# COCO KEYPOINT INDICES  (YOLOv8-pose 17-point layout)
-# ══════════════════════════════════════════════════════════════════════════════
-
-KP_NOSE       = 0
-KP_L_EYE      = 1;  KP_R_EYE      = 2
-KP_L_EAR      = 3;  KP_R_EAR      = 4
-KP_L_SHOULDER = 5;  KP_R_SHOULDER = 6
-KP_L_ELBOW    = 7;  KP_R_ELBOW    = 8
-KP_L_WRIST    = 9;  KP_R_WRIST    = 10
-KP_L_HIP      = 11; KP_R_HIP      = 12
-KP_L_KNEE     = 13; KP_R_KNEE     = 14
-KP_L_ANKLE    = 15; KP_R_ANKLE    = 16
-
-# Upper-body skeleton edges (drawn per student)
+# Display
+WINDOW_NAME = "EduAware Classroom Behavior Analytics"
+WINDOW_W = 1280
+WINDOW_H = 720
+BEHAVIOR_COLORS = {
+    "ATTENTIVE": (50, 210, 50),
+    "WRITING": (0, 210, 255),
+    "USING_PHONE": (0, 80, 255),
+    "SLEEPING": (0, 0, 220),
+    "STANDING": (255, 170, 40),
+    "TALKING": (0, 165, 255),
+    "DISTRACTED": (0, 140, 255),
+    "UNKNOWN": (150, 150, 150),
+}
 UPPER_SKELETON_EDGES = [
-    (KP_NOSE, KP_L_EYE),       (KP_NOSE, KP_R_EYE),
-    (KP_L_EYE, KP_L_EAR),      (KP_R_EYE, KP_R_EAR),
+    (KP_NOSE, KP_L_EYE), (KP_NOSE, KP_R_EYE),
+    (KP_L_EYE, KP_L_EAR), (KP_R_EYE, KP_R_EAR),
     (KP_L_SHOULDER, KP_R_SHOULDER),
-    (KP_L_SHOULDER, KP_L_ELBOW),(KP_L_ELBOW, KP_L_WRIST),
-    (KP_R_SHOULDER, KP_R_ELBOW),(KP_R_ELBOW, KP_R_WRIST),
-    (KP_L_SHOULDER, KP_L_HIP),  (KP_R_SHOULDER, KP_R_HIP),
+    (KP_L_SHOULDER, KP_L_ELBOW), (KP_L_ELBOW, KP_L_WRIST),
+    (KP_R_SHOULDER, KP_R_ELBOW), (KP_R_ELBOW, KP_R_WRIST),
+    (KP_L_SHOULDER, KP_L_HIP), (KP_R_SHOULDER, KP_R_HIP),
 ]
